@@ -1,0 +1,11 @@
+{
+  "name": "qarzdorlik-netlify",
+  "version": "1.0.0",
+  "description": "Qarzdorlik - Netlify + Supabase versiyasi",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.43.0"
+  },
+  "devDependencies": {
+    "netlify-cli": "^17.0.0"
+  }
+}

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Qarzdorlik - Admin Panel</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<!-- LOGIN SAHIFASI -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-box">
+    <h1>🔐 Qarzdorlik</h1>
+    <p class="subtitle">Admin panelga kirish</p>
+    <input type="password" id="passwordInput" placeholder="Parolni kiriting" />
+    <button onclick="login()">Kirish</button>
+    <p id="loginError" class="error-text"></p>
+  </div>
+</div>
+
+<!-- ASOSIY PANEL -->
+<div id="mainScreen" class="main-screen" style="display:none;">
+
+  <header class="header">
+    <h1>💰 Qarzdorlik</h1>
+    <button class="btn-logout" onclick="logout()">Chiqish</button>
+  </header>
+
+  <!-- STATISTIKA -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-label">Jami mijozlar</div>
+      <div class="stat-value" id="statCustomers">0</div>
+    </div>
+    <div class="stat-card debt">
+      <div class="stat-label">Umumiy qarz</div>
+      <div class="stat-value" id="statDebt">0</div>
+    </div>
+    <div class="stat-card collected">
+      <div class="stat-label">Yig'ilgan pul</div>
+      <div class="stat-value" id="statCollected">0</div>
+    </div>
+  </div>
+
+  <!-- YANGI MIJOZ QO'SHISH -->
+  <div class="card">
+    <h2>➕ Yangi mijoz qo'shish</h2>
+    <div class="form-row">
+      <input type="text" id="newCustomerName" placeholder="Mijoz ismi" />
+      <input type="text" id="newCustomerPhone" placeholder="Telefon raqami (ixtiyoriy)" />
+      <button onclick="addCustomer()">Qo'shish</button>
+    </div>
+  </div>
+
+  <!-- MIJOZLAR RO'YXATI -->
+  <div class="card">
+    <h2>👥 Mijozlar ro'yxati</h2>
+    <div id="customersList" class="customers-list">
+      <!-- JS orqali to'ldiriladi -->
+    </div>
+  </div>
+
+</div>
+
+<!-- MIJOZ TAFSILOTLARI MODAL -->
+<div id="customerModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <span class="modal-close" onclick="closeModal()">&times;</span>
+    <h2 id="modalCustomerName"></h2>
+    <p id="modalCustomerPhone" class="text-muted"></p>
+
+    <div class="add-debt-form">
+      <h3>➕ Yangi qarz qo'shish</h3>
+      <div class="form-row">
+        <input type="number" id="newDebtAmount" placeholder="Summa (so'm)" />
+        <input type="text" id="newDebtComment" placeholder="Izoh (masalan: Non, sut)" />
+        <button onclick="addDebt()">Qo'shish</button>
+      </div>
+    </div>
+
+    <h3>📋 Qarzlar tarixi</h3>
+    <div id="debtsList" class="debts-list">
+      <!-- JS orqali to'ldiriladi -->
+    </div>
+
+    <button class="btn-danger" onclick="removeCustomer()">🗑️ Mijozni o'chirish</button>
+  </div>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

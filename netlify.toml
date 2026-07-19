@@ -1,0 +1,10 @@
+[build]
+  functions = "netlify/functions"
+  publish = "public"
+
+# /api/customers -> /.netlify/functions/customers
+# Bu qisqaroq va tushunarli manzillar ishlatish uchun
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200

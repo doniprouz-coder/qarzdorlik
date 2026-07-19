@@ -1,0 +1,271 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #f5f6fa;
+  color: #2d3436;
+}
+
+/* ============================================
+   LOGIN SAHIFA
+   ============================================ */
+
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.login-box {
+  background: white;
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  width: 90%;
+  max-width: 360px;
+  text-align: center;
+}
+
+.login-box h1 { font-size: 28px; margin-bottom: 8px; }
+.subtitle { color: #888; margin-bottom: 24px; }
+
+.login-box input {
+  width: 100%;
+  padding: 14px;
+  border: 2px solid #eee;
+  border-radius: 10px;
+  font-size: 16px;
+  margin-bottom: 16px;
+}
+
+.login-box button {
+  width: 100%;
+  padding: 14px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.login-box button:hover { background: #5568d3; }
+
+.error-text { color: #e74c3c; margin-top: 12px; font-size: 14px; }
+
+/* ============================================
+   ASOSIY PANEL
+   ============================================ */
+
+.main-screen { max-width: 900px; margin: 0 auto; padding: 20px; }
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.header h1 { font-size: 24px; }
+
+.btn-logout {
+  background: white;
+  border: 2px solid #eee;
+  padding: 10px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+/* STATISTIKA */
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: white;
+  padding: 20px;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.stat-label { font-size: 13px; color: #888; margin-bottom: 6px; }
+.stat-value { font-size: 22px; font-weight: 700; }
+.stat-card.debt .stat-value { color: #e74c3c; }
+.stat-card.collected .stat-value { color: #27ae60; }
+
+/* KARTALAR */
+
+.card {
+  background: white;
+  padding: 24px;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  margin-bottom: 20px;
+}
+
+.card h2 { font-size: 18px; margin-bottom: 16px; }
+
+.form-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.form-row input {
+  flex: 1;
+  min-width: 140px;
+  padding: 12px;
+  border: 2px solid #eee;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.form-row button {
+  padding: 12px 24px;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.form-row button:hover { background: #5568d3; }
+
+/* MIJOZLAR RO'YXATI */
+
+.customers-list { display: flex; flex-direction: column; gap: 10px; }
+
+.customer-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: #f9f9fb;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.customer-item:hover { background: #f0f0f5; }
+
+.customer-info { display: flex; flex-direction: column; gap: 4px; }
+.customer-name { font-weight: 600; font-size: 16px; }
+.customer-phone { font-size: 13px; color: #888; }
+
+.customer-debt { font-weight: 700; font-size: 16px; }
+.customer-debt.has-debt { color: #e74c3c; }
+.customer-debt.no-debt { color: #27ae60; }
+
+.empty-state { text-align: center; padding: 40px; color: #aaa; }
+
+/* MODAL */
+
+.modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 100;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  padding: 30px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 85vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.modal-close {
+  position: absolute;
+  top: 16px; right: 20px;
+  font-size: 28px;
+  cursor: pointer;
+  color: #aaa;
+}
+
+.modal-close:hover { color: #333; }
+
+.text-muted { color: #888; margin-bottom: 20px; }
+
+.add-debt-form {
+  background: #f9f9fb;
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.add-debt-form h3 { font-size: 15px; margin-bottom: 12px; }
+
+.debts-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+
+.debt-item {
+  padding: 14px;
+  background: #f9f9fb;
+  border-radius: 10px;
+  border-left: 4px solid #e74c3c;
+}
+
+.debt-item.paid { border-left-color: #27ae60; }
+.debt-item.partial { border-left-color: #f39c12; }
+
+.debt-comment { font-weight: 600; margin-bottom: 6px; }
+.debt-amounts { font-size: 13px; color: #666; display: flex; gap: 12px; flex-wrap: wrap; }
+.debt-remaining { font-weight: 700; color: #e74c3c; margin-top: 6px; }
+
+.debt-payment-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.debt-payment-row input {
+  flex: 1;
+  padding: 8px;
+  border: 2px solid #eee;
+  border-radius: 8px;
+}
+
+.debt-payment-row button {
+  padding: 8px 16px;
+  background: #27ae60;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.btn-danger {
+  width: 100%;
+  padding: 12px;
+  background: #fff0f0;
+  color: #e74c3c;
+  border: 2px solid #ffdddd;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-danger:hover { background: #ffe0e0; }
+
+@media (max-width: 480px) {
+  .form-row { flex-direction: column; }
+  .form-row input, .form-row button { width: 100%; }
+}
