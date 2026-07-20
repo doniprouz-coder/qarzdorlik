@@ -1,21 +1,39 @@
 // netlify/functions/telegram-webhook.js
 //
-// MUHIM TUSHUNCHA: Netlify Functions "doim tinglab turolmaydi" (oddiy
-// serverdan farqli). Shuning uchun bot boshqacha ishlaydi:
-//
-//   Eski usul (server):  Bot doim Telegram'ga "yangi xabar bormi?" deb so'raydi
-//   Bu usul (Netlify):   Telegram o'zi, yangi xabar kelganda, BIZGA yozadi
-//
-// Bu "webhook" deyiladi. Buni sozlash uchun 1 marta maxsus link ochish kerak
-// (QOLLANMA.md faylida ko'rsatilgan).
-//
-// Yana bir farq: bu funksiya har safar "toza holatda" ishga tushadi, hech
-// narsani xotirada saqlay olmaydi. Shuning uchun ro'yxatdan o'tish oddiy
-// qilib qilingan - ism va telefonni BITTA xabarda, vergul bilan ajratib
-// yuborish orqali.
+// YANGILANGAN VERSIYA:
+// 1. Vergul shart emas - "Ism Familiya +998901234567" formatida yuborsa yetarli
+// 2. Agar admin oldindan shu telefon bilan mijoz qo'shgan bo'lsa - dublikat
+//    yaratmaydi, balki o'sha eski yozuvga Telegram'ni ulaydi
 
 const { getClient } = require('./_supabase');
 const { sendTelegramMessage, formatSum } = require('./_telegram');
+
+// ============================================
+// YORDAMCHI FUNKSIYALAR
+// ============================================
+
+// Matndan telefon raqamini topib olish (format qanday bo'lishidan qat'iy nazar)
+function extractPhone(text) {
+  const match = text.match(/(\+?\d[\d\-\s]{7,17}\d)/);
+  return match ? match[1] : null;
+}
+
+// Telefon raqamini solishtirish uchun - faqat oxirgi 9 ta raqamni olamiz
+// (bu O'zbekiston mobil raqamlari uzunligi, +998, 998, yoki 0 bilan
+// boshlanishidan qat'iy nazar to'g'ri solishtiradi)
+function normalizePhoneKey(phone) {
+  if (!phone) return '';
+  const digits = phone.replace(/\D/g, '');
+  return digits.slice(-9);
+}
+
+// Telefon raqamini matndan olib tashlab, qolganini ism sifatida qaytaradi
+function extractName(text, phoneRaw) {
+  let name = text.replace(phoneRaw, '');
+  name = name.replace(/[,\-–—]+/g, ' '); // vergul, tire va h.k. tozalash
+  name = name.replace(/\s+/g, ' ').trim();
+  return name;
+}
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
@@ -25,7 +43,6 @@ exports.handler = async (event) => {
   const update = JSON.parse(event.body || '{}');
   const message = update.message;
 
-  // Agar oddiy matn xabar bo'lmasa (masalan rasm), e'tiborsiz qoldiramiz
   if (!message || !message.text) {
     return { statusCode: 200, body: 'ok' };
   }
@@ -57,9 +74,8 @@ exports.handler = async (event) => {
         await sendTelegramMessage(
           chatId,
           `Assalomu alaykum! 👋\n\nQarzdorlik botiga xush kelibsiz.\n\n` +
-            `Ro'yxatdan o'tish uchun ism va telefon raqamingizni SHU FORMATDA yuboring:\n\n` +
-            `Aziz Karimov, +998901234567\n\n` +
-            `(Ism bilan telefon orasiga vergul qo'ying)`
+            `Ro'yxatdan o'tish uchun ism va telefon raqamingizni yuboring:\n\n` +
+            `Aziz Karimov +998901234567`
         );
       }
       return { statusCode: 200, body: 'ok' };
@@ -113,37 +129,82 @@ exports.handler = async (event) => {
     }
 
     // ============================================
-    // RO'YXATDAN O'TISH ("Ism, Telefon" formatida)
+    // RO'YXATDAN O'TISH (vergul shart emas)
+    // Matnda telefon raqami topilsa - ro'yxatdan o'tish deb hisoblanadi
     // ============================================
-    if (text.includes(',')) {
-      const { data: existing } = await supabase
+    const phoneRaw = extractPhone(text);
+
+    if (phoneRaw) {
+      // Avval - bu odam allaqachon Telegram orqali ro'yxatdan o'tganmi?
+      const { data: existingByTelegram } = await supabase
         .from('customers')
         .select('*')
         .eq('telegram_id', telegramId)
         .maybeSingle();
 
-      if (existing) {
-        await sendTelegramMessage(chatId, `Siz allaqachon ro'yxatdan o'tgansiz.\n\n/qarz buyrug'ini yuboring.`);
-        return { statusCode: 200, body: 'ok' };
-      }
-
-      const parts = text.split(',');
-      const name = parts[0].trim();
-      const phone = parts[1] ? parts[1].trim() : null;
-
-      if (!name) {
+      if (existingByTelegram) {
         await sendTelegramMessage(
           chatId,
-          `Iltimos, to'g'ri formatda yuboring:\n\nAziz Karimov, +998901234567`
+          `Siz allaqachon ro'yxatdan o'tgansiz.\n\n/qarz buyrug'ini yuboring.`
         );
         return { statusCode: 200, body: 'ok' };
       }
 
+      const name = extractName(text, phoneRaw);
+
+      if (!name) {
+        await sendTelegramMessage(
+          chatId,
+          `Iltimos, ism va telefon raqamingizni birga yuboring:\n\nAziz Karimov +998901234567`
+        );
+        return { statusCode: 200, body: 'ok' };
+      }
+
+      const phoneKey = normalizePhoneKey(phoneRaw);
+
+      // MUHIM: Admin oldindan shu telefon bilan mijoz qo'shganmi?
+      // (telegram_id hali bo'sh bo'lgan yozuvlarni tekshiramiz)
+      const { data: candidates } = await supabase
+        .from('customers')
+        .select('*')
+        .is('telegram_id', null)
+        .not('phone', 'is', null);
+
+      let matched = null;
+      for (const c of candidates || []) {
+        if (normalizePhoneKey(c.phone) === phoneKey) {
+          matched = c;
+          break;
+        }
+      }
+
+      if (matched) {
+        // DUBLIKAT YARATMAYMIZ - eski yozuvga Telegram'ni ulaymiz
+        const { data: updated } = await supabase
+          .from('customers')
+          .update({
+            telegram_id: telegramId,
+            telegram_username: username,
+          })
+          .eq('id', matched.id)
+          .select()
+          .single();
+
+        await sendTelegramMessage(
+          chatId,
+          `✅ Xush kelibsiz, ${updated.name}!\n\n` +
+            `Siz bizning mijozlar ro'yxatida bor ekansiz, hisobingiz Telegram bilan ulandi.\n\n` +
+            `Qarzingizni bilish uchun /qarz buyrug'ini yuboring.`
+        );
+        return { statusCode: 200, body: 'ok' };
+      }
+
+      // Mos kelmadi - yangi mijoz sifatida yaratamiz
       const { data: customer, error } = await supabase
         .from('customers')
         .insert({
           name,
-          phone,
+          phone: phoneRaw,
           telegram_id: telegramId,
           telegram_username: username,
         })
@@ -159,14 +220,14 @@ exports.handler = async (event) => {
         chatId,
         `✅ Muvaffaqiyatli ro'yxatdan o'tdingiz!\n\n` +
           `👤 Ism: ${customer.name}\n` +
-          `📱 Telefon: ${customer.phone || 'kiritilmagan'}\n\n` +
+          `📱 Telefon: ${customer.phone}\n\n` +
           `Qarzingizni bilish uchun istalgan vaqtda /qarz buyrug'ini yuborishingiz mumkin.`
       );
       return { statusCode: 200, body: 'ok' };
     }
 
     // ============================================
-    // TUSHUNARSIZ XABAR
+    // TUSHUNARSIZ XABAR (telefon raqami topilmadi)
     // ============================================
     await sendTelegramMessage(
       chatId,
@@ -175,6 +236,6 @@ exports.handler = async (event) => {
     return { statusCode: 200, body: 'ok' };
   } catch (error) {
     console.log('Webhook xatosi:', error.message);
-    return { statusCode: 200, body: 'ok' }; // Telegram'ga har doim 200 qaytarish kerak
+    return { statusCode: 200, body: 'ok' };
   }
 };

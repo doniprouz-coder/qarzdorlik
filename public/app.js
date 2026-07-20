@@ -6,6 +6,7 @@
 // har bir so'rovda "Authorization" header orqali yuboriladi.
 
 let currentCustomerId = null;
+let allCustomers = []; // Qidiruv uchun - barcha mijozlar shu yerda saqlanadi
 
 // ============================================
 // TOKEN BOSHQARISH (localStorage)
@@ -146,29 +147,50 @@ async function loadStats() {
 async function loadCustomers() {
   try {
     const res = await apiFetch('/api/customers');
-    const customers = await res.json();
+    allCustomers = await res.json();
 
-    const listEl = document.getElementById('customersList');
-
-    if (customers.length === 0) {
-      listEl.innerHTML = '<div class="empty-state">Hali mijozlar yo\'q. Yuqoridan qo\'shing.</div>';
-      return;
-    }
-
-    listEl.innerHTML = customers.map(c => `
-      <div class="customer-item" onclick="openCustomer(${c.id})">
-        <div class="customer-info">
-          <div class="customer-name">${escapeHtml(c.name)}</div>
-          <div class="customer-phone">${c.phone ? escapeHtml(c.phone) : (c.telegram_username ? '@' + escapeHtml(c.telegram_username) : 'Telefon kiritilmagan')}</div>
-        </div>
-        <div class="customer-debt ${c.total_debt > 0 ? 'has-debt' : 'no-debt'}">
-          ${c.total_debt > 0 ? formatMoney(c.total_debt) : '✓ Qarzi yo\'q'}
-        </div>
-      </div>
-    `).join('');
+    renderCustomersList(allCustomers);
   } catch (error) {
     console.log('Mijozlarni yuklashda xatolik:', error.message);
   }
+}
+
+function renderCustomersList(customers) {
+  const listEl = document.getElementById('customersList');
+
+  if (customers.length === 0) {
+    listEl.innerHTML = '<div class="empty-state">Hech narsa topilmadi.</div>';
+    return;
+  }
+
+  listEl.innerHTML = customers.map(c => `
+    <div class="customer-item" onclick="openCustomer(${c.id})">
+      <div class="customer-info">
+        <div class="customer-name">${escapeHtml(c.name)}</div>
+        <div class="customer-phone">${c.phone ? escapeHtml(c.phone) : (c.telegram_username ? '@' + escapeHtml(c.telegram_username) : 'Telefon kiritilmagan')}</div>
+      </div>
+      <div class="customer-debt ${c.total_debt > 0 ? 'has-debt' : 'no-debt'}">
+        ${c.total_debt > 0 ? formatMoney(c.total_debt) : '✓ Qarzi yo\'q'}
+      </div>
+    </div>
+  `).join('');
+}
+
+function filterCustomers() {
+  const query = document.getElementById('searchInput').value.trim().toLowerCase();
+
+  if (!query) {
+    renderCustomersList(allCustomers);
+    return;
+  }
+
+  const filtered = allCustomers.filter(c => {
+    const name = (c.name || '').toLowerCase();
+    const phone = (c.phone || '').toLowerCase();
+    return name.includes(query) || phone.includes(query);
+  });
+
+  renderCustomersList(filtered);
 }
 
 async function addCustomer() {
@@ -248,9 +270,20 @@ function renderDebts(debts) {
     return;
   }
 
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
   listEl.innerHTML = debts.map(d => {
     const remaining = d.total_amount - d.paid_amount;
-    const statusClass = d.status === 'yopilgan' ? 'paid' : (d.status === 'qisman_tolangan' ? 'partial' : '');
+    const isOverdue = d.due_date && d.due_date < today && remaining > 0;
+    const statusClass = d.status === 'yopilgan' ? 'paid' : (isOverdue ? 'overdue' : (d.status === 'qisman_tolangan' ? 'partial' : ''));
+
+    let dueDateHtml = '';
+    if (d.due_date) {
+      const formatted = formatDate(d.due_date);
+      dueDateHtml = isOverdue
+        ? `<div class="debt-due-date overdue-text">⚠️ Muddati o'tgan: ${formatted}</div>`
+        : `<div class="debt-due-date">📅 Muddat: ${formatted}</div>`;
+    }
 
     return `
       <div class="debt-item ${statusClass}">
@@ -259,6 +292,7 @@ function renderDebts(debts) {
           <span>Jami: ${formatMoney(d.total_amount)}</span>
           <span>To'landi: ${formatMoney(d.paid_amount)}</span>
         </div>
+        ${dueDateHtml}
         ${remaining > 0 ? `
           <div class="debt-remaining">Qoldiq: ${formatMoney(remaining)}</div>
           <div class="debt-payment-row">
@@ -271,6 +305,11 @@ function renderDebts(debts) {
   }).join('');
 }
 
+function formatDate(dateStr) {
+  const [year, month, day] = dateStr.split('-');
+  return `${day}.${month}.${year}`;
+}
+
 // ============================================
 // QARZ QO'SHISH
 // ============================================
@@ -278,6 +317,7 @@ function renderDebts(debts) {
 async function addDebt() {
   const amount = document.getElementById('newDebtAmount').value;
   const comment = document.getElementById('newDebtComment').value.trim();
+  const dueDate = document.getElementById('newDebtDueDate').value;
 
   if (!amount || amount <= 0) {
     alert("To'g'ri summa kiriting!");
@@ -291,11 +331,13 @@ async function addDebt() {
         customer_id: currentCustomerId,
         total_amount: amount,
         comment,
+        due_date: dueDate || null,
       }),
     });
 
     document.getElementById('newDebtAmount').value = '';
     document.getElementById('newDebtComment').value = '';
+    document.getElementById('newDebtDueDate').value = '';
 
     openCustomer(currentCustomerId);
     loadCustomers();
@@ -327,6 +369,29 @@ async function makePayment(debtId) {
     openCustomer(currentCustomerId);
     loadCustomers();
     loadStats();
+  } catch (error) {
+    alert('Xatolik: ' + error.message);
+  }
+}
+
+// ============================================
+// OMMAVIY ESLATMA YUBORISH
+// ============================================
+
+async function sendReminders() {
+  if (!confirm("Qarzi bor va Telegram'da ro'yxatdan o'tgan BARCHA mijozlarga eslatma xabar yuborilsinmi?")) {
+    return;
+  }
+
+  try {
+    const res = await apiFetch('/api/notify-debtors', { method: 'POST' });
+    const data = await res.json();
+
+    if (res.ok) {
+      alert(`✅ Yuborildi!\n\n${data.sentCount} ta mijozga eslatma xabar yuborildi.`);
+    } else {
+      alert('Xatolik: ' + (data.error || 'Nomalum xato'));
+    }
   } catch (error) {
     alert('Xatolik: ' + error.message);
   }

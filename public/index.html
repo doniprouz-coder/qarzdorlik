@@ -53,9 +53,19 @@
     </div>
   </div>
 
+  <!-- OMMAVIY ESLATMA -->
+  <div class="card">
+    <h2>📢 Qarzdorlarga ommaviy eslatma</h2>
+    <p class="text-muted" style="margin-bottom:16px;">
+      Telegram'da ro'yxatdan o'tgan, qarzi bor barcha mijozlarga bitta tugma bilan eslatma xabar yuboradi.
+    </p>
+    <button class="btn-reminder" onclick="sendReminders()">Eslatma yuborish</button>
+  </div>
+
   <!-- MIJOZLAR RO'YXATI -->
   <div class="card">
     <h2>👥 Mijozlar ro'yxati</h2>
+    <input type="text" id="searchInput" class="search-input" placeholder="🔍 Ism yoki telefon bo'yicha qidirish..." oninput="filterCustomers()" />
     <div id="customersList" class="customers-list">
       <!-- JS orqali to'ldiriladi -->
     </div>
@@ -75,6 +85,9 @@
       <div class="form-row">
         <input type="number" id="newDebtAmount" placeholder="Summa (so'm)" />
         <input type="text" id="newDebtComment" placeholder="Izoh (masalan: Non, sut)" />
+      </div>
+      <div class="form-row" style="margin-top:10px;">
+        <input type="date" id="newDebtDueDate" />
         <button onclick="addDebt()">Qo'shish</button>
       </div>
     </div>
@@ -87,6 +100,8 @@
     <button class="btn-danger" onclick="removeCustomer()">🗑️ Mijozni o'chirish</button>
   </div>
 </div>
+
+<div class="creator-credit">Creator by Mahmudjonov Doniyorbek +998932921229</div>
 
 <script src="/app.js"></script>
 </body>

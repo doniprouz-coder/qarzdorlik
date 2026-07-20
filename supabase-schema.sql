@@ -49,5 +49,3 @@ ALTER TABLE customers DISABLE ROW LEVEL SECURITY;
 ALTER TABLE debts DISABLE ROW LEVEL SECURITY;
 ALTER TABLE payments DISABLE ROW LEVEL SECURITY;
 
--- Tayyor! Endi "Table Editor" bo'limida 3 ta jadval ko'rinishi kerak:
--- customers, debts, payments

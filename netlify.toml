@@ -8,3 +8,8 @@
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
+
+# Har kuni ertalab soat 9:00da (Toshkent vaqti = UTC+5, shuning uchun 04:00 UTC)
+# qarzi bor mijozlarga avtomatik eslatma yuboriladi
+[functions."scheduled-reminder"]
+  schedule = "0 4 * * *"

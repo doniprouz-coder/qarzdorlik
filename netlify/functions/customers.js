@@ -37,6 +37,9 @@ exports.handler = async (event) => {
         total_debt: debtMap[c.id] || 0,
       }));
 
+      // Eng ko'p qarzi borlar tepada chiqishi uchun saralash
+      result.sort((a, b) => b.total_debt - a.total_debt);
+
       return {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json' },

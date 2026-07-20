@@ -10,7 +10,7 @@ exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') return { statusCode: 405, body: 'Method not allowed' };
 
   try {
-    const { customer_id, total_amount, comment } = JSON.parse(event.body || '{}');
+    const { customer_id, total_amount, comment, due_date } = JSON.parse(event.body || '{}');
 
     if (!customer_id || !total_amount) {
       return {
@@ -29,6 +29,7 @@ exports.handler = async (event) => {
         customer_id,
         total_amount: parseInt(total_amount),
         comment: comment || null,
+        due_date: due_date || null,
       })
       .select()
       .single();
