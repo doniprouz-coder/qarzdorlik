@@ -101,6 +101,20 @@ body {
 .stat-card.debt .stat-value { color: #e74c3c; }
 .stat-card.collected .stat-value { color: #27ae60; }
 
+.reset-row { text-align: center; margin-bottom: 24px; }
+
+.btn-reset-small {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 4px;
+}
+
+.btn-reset-small:hover { color: #e74c3c; }
+
 /* KARTALAR */
 
 .card {
@@ -298,14 +312,42 @@ body {
 
 .creator-credit {
   position: fixed;
-  bottom: 6px;
-  right: 10px;
-  font-size: 10px;
-  color: #b0b0b8;
-  opacity: 0.6;
-  pointer-events: none;
-  z-index: 1;
-  background: rgba(255,255,255,0.6);
-  padding: 2px 6px;
-  border-radius: 6px;
+  bottom: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  font-size: 12px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  box-shadow: 0 4px 14px rgba(102, 126, 234, 0.35);
+  z-index: 10;
+}
+
+.creator-credit span {
+  opacity: 0.9;
+  white-space: nowrap;
+}
+
+.creator-credit a {
+  color: white;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.creator-credit a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+  .creator-credit {
+    left: 14px;
+    right: 14px;
+    bottom: 10px;
+    justify-content: center;
+    font-size: 11px;
+  }
 }

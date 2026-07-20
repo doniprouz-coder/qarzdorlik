@@ -375,6 +375,31 @@ async function makePayment(debtId) {
 }
 
 // ============================================
+// YIG'ILGAN PULNI 0 QILISH
+// ============================================
+
+async function resetPayments() {
+  if (!confirm("Diqqat! Barcha to'lovlar tarixi o'chadi va 'Yig'ilgan pul' 0 bo'ladi.\n\nMijozlar va qarz summalari o'zgarmaydi.\n\nDavom etasizmi?")) {
+    return;
+  }
+
+  try {
+    const res = await apiFetch('/api/reset-payments', { method: 'POST' });
+
+    if (res.ok) {
+      alert("✅ Yig'ilgan pul 0 qilindi!");
+      loadStats();
+      loadCustomers();
+    } else {
+      const data = await res.json();
+      alert('Xatolik: ' + (data.error || 'Nomalum xato'));
+    }
+  } catch (error) {
+    alert('Xatolik: ' + error.message);
+  }
+}
+
+// ============================================
 // OMMAVIY ESLATMA YUBORISH
 // ============================================
 
