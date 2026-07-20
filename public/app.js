@@ -311,6 +311,46 @@ function formatDate(dateStr) {
 }
 
 // ============================================
+// UMUMIY TO'LOV (eng eski qarzdan avtomatik ayiriladi)
+// ============================================
+
+async function payTotal() {
+  const amount = document.getElementById('totalPaymentAmount').value;
+
+  if (!amount || amount <= 0) {
+    alert("To'g'ri summa kiriting!");
+    return;
+  }
+
+  try {
+    const res = await apiFetch('/api/pay-customer', {
+      method: 'POST',
+      body: JSON.stringify({ customer_id: currentCustomerId, amount }),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      document.getElementById('totalPaymentAmount').value = '';
+
+      let msg = `✅ To'lov qabul qilindi!\n\n${data.affectedCount} ta qarzga taqsimlandi.\nQolgan umumiy qarz: ${formatMoney(data.totalRemaining)}`;
+      if (data.overpaid > 0) {
+        msg += `\n\n💡 Ortiqcha to'lov: ${formatMoney(data.overpaid)} (barcha qarzlar allaqachon yopilgan edi)`;
+      }
+      alert(msg);
+
+      openCustomer(currentCustomerId);
+      loadCustomers();
+      loadStats();
+    } else {
+      alert('Xatolik: ' + (data.error || 'Nomalum xato'));
+    }
+  } catch (error) {
+    alert('Xatolik: ' + error.message);
+  }
+}
+
+// ============================================
 // QARZ QO'SHISH
 // ============================================
 

@@ -234,6 +234,16 @@ body {
   margin-bottom: 20px;
 }
 
+.pay-total-form {
+  background: #eafaf1;
+  border: 2px solid #27ae60;
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.pay-total-form h3 { font-size: 15px; margin-bottom: 6px; color: #1e8449; }
+
 .add-debt-form h3 { font-size: 15px; margin-bottom: 12px; }
 
 .debts-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
