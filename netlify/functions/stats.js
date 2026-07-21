@@ -25,7 +25,22 @@ exports.handler = async (event) => {
       }
     });
 
-    const { data: payments } = await supabase.from('payments').select('amount');
+    // "Yig'ilgan pul" reset qilingan bo'lsa, faqat SHU VAQTDAN keyingi
+    // to'lovlarni hisoblaymiz (eski to'lov yozuvlari, qarz holati - tegilmaydi)
+    const { data: settings } = await supabase
+      .from('app_settings')
+      .select('stats_reset_at')
+      .eq('id', 1)
+      .maybeSingle();
+
+    const resetAt = settings && settings.stats_reset_at;
+
+    let paymentsQuery = supabase.from('payments').select('amount');
+    if (resetAt) {
+      paymentsQuery = paymentsQuery.gt('created_at', resetAt);
+    }
+
+    const { data: payments } = await paymentsQuery;
     const totalCollected = (payments || []).reduce((sum, p) => sum + p.amount, 0);
 
     return {

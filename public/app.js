@@ -419,7 +419,7 @@ async function makePayment(debtId) {
 // ============================================
 
 async function resetPayments() {
-  if (!confirm("Diqqat! Barcha to'lovlar tarixi o'chadi va 'Yig'ilgan pul' 0 bo'ladi.\n\nMijozlar va qarz summalari o'zgarmaydi.\n\nDavom etasizmi?")) {
+  if (!confirm("\"Yig'ilgan pul\" ko'rsatkichi 0'dan qayta sanaladi.\n\nQarzlar holati (kim to'lagan, kim yo'q) O'ZGARMAYDI - faqat ko'rsatkich reset bo'ladi.\n\nDavom etasizmi?")) {
     return;
   }
 

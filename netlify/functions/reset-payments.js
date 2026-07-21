@@ -1,8 +1,13 @@
 // netlify/functions/reset-payments.js
-// "Yig'ilgan pul" statistikasini 0 ga qaytaradi:
-// - Barcha to'lovlar tarixini o'chiradi
-// - Har bir qarzni "to'lanmagan" holatga qaytaradi
-// - Mijozlar va qarz summalari O'ZGARMAYDI
+//
+// MUHIM: Bu funksiya endi HECH QANDAY qarz yoki to'lov yozuvini
+// O'CHIRMAYDI va O'ZGARTIRMAYDI. Faqat "hisoblash nuqtasi"ni belgilaydi -
+// shu vaqtdan keyingi to'lovlarni "Yig'ilgan pul"ga qo'shib hisoblaydi.
+//
+// Natijada:
+//   - Qarzlar holati (to'langan/to'lanmagan) - O'ZGARMAYDI
+//   - To'lov tarixi - SAQLANIB QOLADI
+//   - Faqat "Yig'ilgan pul" ko'rsatkichi 0'dan qayta sanaladi
 
 const { getClient } = require('./_supabase');
 const { verifyAuth, unauthorizedResponse } = require('./_auth');
@@ -14,21 +19,12 @@ exports.handler = async (event) => {
   const supabase = getClient();
 
   try {
-    // Barcha to'lovlarni o'chirish
-    const { error: deleteError } = await supabase
-      .from('payments')
-      .delete()
-      .neq('id', 0); // barcha qatorlarni o'chirish uchun shart
+    const { error } = await supabase
+      .from('app_settings')
+      .update({ stats_reset_at: new Date().toISOString() })
+      .eq('id', 1);
 
-    if (deleteError) throw deleteError;
-
-    // Barcha qarzlarni "to'lanmagan" holatga qaytarish
-    const { error: updateError } = await supabase
-      .from('debts')
-      .update({ paid_amount: 0, status: 'qarzdor' })
-      .neq('id', 0);
-
-    if (updateError) throw updateError;
+    if (error) throw error;
 
     return {
       statusCode: 200,
