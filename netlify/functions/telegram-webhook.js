@@ -105,24 +105,29 @@ exports.handler = async (event) => {
         .eq('customer_id', customer.id)
         .neq('status', 'yopilgan');
 
+      let msg = '';
+
       if (!debts || debts.length === 0) {
-        await sendTelegramMessage(chatId, `✅ Sizda qarz mavjud emas!`);
-        return { statusCode: 200, body: 'ok' };
+        msg = `✅ Sizda qarz mavjud emas!`;
+      } else {
+        msg = `💰 Sizning qarzlaringiz:\n\n`;
+        let total = 0;
+
+        debts.forEach((d, i) => {
+          const remaining = d.total_amount - d.paid_amount;
+          total += remaining;
+          msg += `${i + 1}. ${d.comment || 'Qarz'}\n`;
+          msg += `   Jami: ${formatSum(d.total_amount)}\n`;
+          msg += `   To'landi: ${formatSum(d.paid_amount)}\n`;
+          msg += `   Qoldiq: ${formatSum(remaining)}\n\n`;
+        });
+
+        msg += `━━━━━━━━━━━━━\n💵 Umumiy qarz: ${formatSum(total)}`;
       }
 
-      let msg = `💰 Sizning qarzlaringiz:\n\n`;
-      let total = 0;
-
-      debts.forEach((d, i) => {
-        const remaining = d.total_amount - d.paid_amount;
-        total += remaining;
-        msg += `${i + 1}. ${d.comment || 'Qarz'}\n`;
-        msg += `   Jami: ${formatSum(d.total_amount)}\n`;
-        msg += `   To'landi: ${formatSum(d.paid_amount)}\n`;
-        msg += `   Qoldiq: ${formatSum(remaining)}\n\n`;
-      });
-
-      msg += `━━━━━━━━━━━━━\n💵 Umumiy qarz: ${formatSum(total)}`;
+      // Keshbek ma'lumotini har doim qo'shamiz (qarzi bo'lsa ham, bo'lmasa ham)
+      const cashback = customer.cashback_balance || 0;
+      msg += `\n\n🎁 To'plangan keshbek: ${formatSum(cashback)}`;
 
       await sendTelegramMessage(chatId, msg);
       return { statusCode: 200, body: 'ok' };

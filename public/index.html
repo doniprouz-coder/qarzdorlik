@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Qarzdorlik - Admin Panel</title>
+<title>Qarzdorlik — Admin Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -11,10 +14,11 @@
 <!-- LOGIN SAHIFASI -->
 <div id="loginScreen" class="login-screen">
   <div class="login-box">
-    <h1>🔐 Qarzdorlik</h1>
-    <p class="subtitle">Admin panelga kirish</p>
-    <input type="password" id="passwordInput" placeholder="Parolni kiriting" />
-    <button onclick="login()">Kirish</button>
+    <div class="login-icon">💰</div>
+    <h1>Qarzdorlik</h1>
+    <p class="subtitle">Admin panelga kirish uchun parolni kiriting</p>
+    <input type="password" id="passwordInput" placeholder="Parol" autocomplete="current-password" />
+    <button class="btn-primary btn-full" onclick="login()">Kirish</button>
     <p id="loginError" class="error-text"></p>
   </div>
 </div>
@@ -23,21 +27,30 @@
 <div id="mainScreen" class="main-screen" style="display:none;">
 
   <header class="header">
-    <h1>💰 Qarzdorlik</h1>
+    <div class="header-title">
+      <span class="header-icon">💰</span>
+      <div>
+        <h1>Qarzdorlik</h1>
+        <p class="header-subtitle">Admin boshqaruv paneli</p>
+      </div>
+    </div>
     <button class="btn-logout" onclick="logout()">Chiqish</button>
   </header>
 
   <!-- STATISTIKA -->
   <div class="stats">
     <div class="stat-card">
+      <div class="stat-icon">👥</div>
       <div class="stat-label">Jami mijozlar</div>
       <div class="stat-value" id="statCustomers">0</div>
     </div>
     <div class="stat-card debt">
+      <div class="stat-icon">📉</div>
       <div class="stat-label">Umumiy qarz</div>
       <div class="stat-value" id="statDebt">0</div>
     </div>
     <div class="stat-card collected">
+      <div class="stat-icon">📈</div>
       <div class="stat-label">Yig'ilgan pul</div>
       <div class="stat-value" id="statCollected">0</div>
     </div>
@@ -47,28 +60,53 @@
     <button class="btn-reset-small" onclick="resetPayments()">🔄 Yig'ilgan pulni 0 qilish</button>
   </div>
 
+  <!-- XARID QO'SHISH (KESHBEK) -->
+  <div class="card card-accent-cashback">
+    <div class="card-header">
+      <span class="card-icon">🎁</span>
+      <div>
+        <h2>Xarid qo'shish</h2>
+        <p class="card-subtitle">Mijoz xaridini kiriting — avtomatik 3% keshbek to'planadi</p>
+      </div>
+    </div>
+    <div class="form-row">
+      <select id="purchaseCustomerSelect" class="select-input"></select>
+      <input type="number" id="purchaseAmount" placeholder="Xarid summasi (so'm)" />
+      <button class="btn-cashback" onclick="addPurchase()">Qo'shish</button>
+    </div>
+  </div>
+
   <!-- YANGI MIJOZ QO'SHISH -->
   <div class="card">
-    <h2>➕ Yangi mijoz qo'shish</h2>
+    <div class="card-header">
+      <span class="card-icon">➕</span>
+      <div><h2>Yangi mijoz qo'shish</h2></div>
+    </div>
     <div class="form-row">
       <input type="text" id="newCustomerName" placeholder="Mijoz ismi" />
       <input type="text" id="newCustomerPhone" placeholder="Telefon raqami (ixtiyoriy)" />
-      <button onclick="addCustomer()">Qo'shish</button>
+      <button class="btn-primary" onclick="addCustomer()">Qo'shish</button>
     </div>
   </div>
 
   <!-- OMMAVIY ESLATMA -->
-  <div class="card">
-    <h2>📢 Qarzdorlarga ommaviy eslatma</h2>
-    <p class="text-muted" style="margin-bottom:16px;">
-      Telegram'da ro'yxatdan o'tgan, qarzi bor barcha mijozlarga bitta tugma bilan eslatma xabar yuboradi.
-    </p>
+  <div class="card card-accent-reminder">
+    <div class="card-header">
+      <span class="card-icon">📢</span>
+      <div>
+        <h2>Qarzdorlarga ommaviy eslatma</h2>
+        <p class="card-subtitle">Telegram'da ro'yxatdan o'tgan, qarzi bor barcha mijozlarga bitta tugma bilan eslatma yuboradi</p>
+      </div>
+    </div>
     <button class="btn-reminder" onclick="sendReminders()">Eslatma yuborish</button>
   </div>
 
   <!-- MIJOZLAR RO'YXATI -->
   <div class="card">
-    <h2>👥 Mijozlar ro'yxati</h2>
+    <div class="card-header">
+      <span class="card-icon">👥</span>
+      <div><h2>Mijozlar ro'yxati</h2></div>
+    </div>
     <input type="text" id="searchInput" class="search-input" placeholder="🔍 Ism yoki telefon bo'yicha qidirish..." oninput="filterCustomers()" />
     <div id="customersList" class="customers-list">
       <!-- JS orqali to'ldiriladi -->
@@ -83,15 +121,23 @@
     <span class="modal-close" onclick="closeModal()">&times;</span>
     <h2 id="modalCustomerName"></h2>
     <p id="modalCustomerPhone" class="text-muted"></p>
+    <div id="modalCashbackBadge" class="cashback-badge"></div>
+
+    <div class="spend-cashback-form">
+      <div class="form-row">
+        <input type="number" id="spendCashbackAmount" placeholder="Ishlatiladigan summa" />
+        <button class="btn-spend-cashback" onclick="spendCashback()">🎁 Keshbek ishlatish</button>
+      </div>
+    </div>
 
     <div class="pay-total-form">
       <h3>💰 Umumiy to'lov qilish</h3>
-      <p class="text-muted" style="font-size:13px; margin-bottom:10px;">
-        Summani kiriting - eng eski qarzdan boshlab avtomatik ayiriladi
+      <p class="text-muted small-note">
+        Summani kiriting — eng eski qarzdan boshlab avtomatik ayiriladi
       </p>
       <div class="form-row">
         <input type="number" id="totalPaymentAmount" placeholder="Summa (so'm)" />
-        <button onclick="payTotal()">To'lash</button>
+        <button class="btn-success" onclick="payTotal()">To'lash</button>
       </div>
     </div>
 
@@ -103,12 +149,22 @@
       </div>
       <div class="form-row" style="margin-top:10px;">
         <input type="date" id="newDebtDueDate" />
-        <button onclick="addDebt()">Qo'shish</button>
+        <button class="btn-primary" onclick="addDebt()">Qo'shish</button>
       </div>
     </div>
 
-    <h3>📋 Qarzlar tarixi</h3>
+    <h3 class="section-title">📋 Qarzlar tarixi</h3>
     <div id="debtsList" class="debts-list">
+      <!-- JS orqali to'ldiriladi -->
+    </div>
+
+    <h3 class="section-title">🛍️ Xaridlar tarixi</h3>
+    <div id="purchasesList" class="purchases-list">
+      <!-- JS orqali to'ldiriladi -->
+    </div>
+
+    <h3 class="section-title">➖ Keshbek ishlatilgan</h3>
+    <div id="cashbackSpendsList" class="purchases-list">
       <!-- JS orqali to'ldiriladi -->
     </div>
 

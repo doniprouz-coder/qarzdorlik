@@ -39,16 +39,21 @@ exports.handler = async (event) => {
         };
       }
 
-      const { data: debts } = await supabase
-        .from('debts')
-        .select('*')
-        .eq('customer_id', id)
-        .order('created_at', { ascending: false });
+      const [{ data: debts }, { data: purchases }, { data: spends }] = await Promise.all([
+        supabase.from('debts').select('*').eq('customer_id', id).order('created_at', { ascending: false }),
+        supabase.from('purchases').select('*').eq('customer_id', id).order('created_at', { ascending: false }),
+        supabase.from('cashback_spends').select('*').eq('customer_id', id).order('created_at', { ascending: false }),
+      ]);
 
       return {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...customer, debts: debts || [] }),
+        body: JSON.stringify({
+          ...customer,
+          debts: debts || [],
+          purchases: purchases || [],
+          cashbackSpends: spends || [],
+        }),
       };
     } catch (error) {
       return {
@@ -60,7 +65,7 @@ exports.handler = async (event) => {
   }
 
   // ============================================
-  // MIJOZNI O'CHIRISH (qarzlari va to'lovlari bilan)
+  // MIJOZNI O'CHIRISH (qarzlari, to'lovlari, xaridlari bilan)
   // ============================================
   if (event.httpMethod === 'DELETE') {
     try {
@@ -72,6 +77,8 @@ exports.handler = async (event) => {
         await supabase.from('debts').delete().eq('customer_id', id);
       }
 
+      await supabase.from('purchases').delete().eq('customer_id', id);
+      await supabase.from('cashback_spends').delete().eq('customer_id', id);
       await supabase.from('customers').delete().eq('id', id);
 
       return {

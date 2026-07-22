@@ -1,5 +1,5 @@
 // netlify/functions/stats.js
-// Dashboard statistikasi - jami mijozlar, qarz, yig'ilgan pul
+// Dashboard statistikasi - TEZLASHTIRILGAN: so'rovlar parallel bajariladi
 
 const { getClient } = require('./_supabase');
 const { verifyAuth, unauthorizedResponse } = require('./_auth');
@@ -10,13 +10,16 @@ exports.handler = async (event) => {
   const supabase = getClient();
 
   try {
-    const { count: totalCustomers } = await supabase
-      .from('customers')
-      .select('*', { count: 'exact', head: true });
-
-    const { data: debts } = await supabase
-      .from('debts')
-      .select('total_amount, paid_amount, status');
+    // Bir-biriga bog'liq bo'lmagan so'rovlarni BIR VAQTDA yuboramiz
+    const [
+      { count: totalCustomers },
+      { data: debts },
+      { data: settings },
+    ] = await Promise.all([
+      supabase.from('customers').select('*', { count: 'exact', head: true }),
+      supabase.from('debts').select('total_amount, paid_amount, status'),
+      supabase.from('app_settings').select('stats_reset_at').eq('id', 1).maybeSingle(),
+    ]);
 
     let totalDebt = 0;
     (debts || []).forEach((d) => {
@@ -25,14 +28,7 @@ exports.handler = async (event) => {
       }
     });
 
-    // "Yig'ilgan pul" reset qilingan bo'lsa, faqat SHU VAQTDAN keyingi
-    // to'lovlarni hisoblaymiz (eski to'lov yozuvlari, qarz holati - tegilmaydi)
-    const { data: settings } = await supabase
-      .from('app_settings')
-      .select('stats_reset_at')
-      .eq('id', 1)
-      .maybeSingle();
-
+    // "Yig'ilgan pul" reset qilingan bo'lsa, faqat shu vaqtdan keyingi to'lovlar
     const resetAt = settings && settings.stats_reset_at;
 
     let paymentsQuery = supabase.from('payments').select('amount');

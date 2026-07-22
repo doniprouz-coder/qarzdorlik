@@ -150,9 +150,24 @@ async function loadCustomers() {
     allCustomers = await res.json();
 
     renderCustomersList(allCustomers);
+    populateCustomerSelect(allCustomers);
   } catch (error) {
     console.log('Mijozlarni yuklashda xatolik:', error.message);
   }
+}
+
+function populateCustomerSelect(customers) {
+  const selectEl = document.getElementById('purchaseCustomerSelect');
+  if (!selectEl) return;
+
+  if (customers.length === 0) {
+    selectEl.innerHTML = '<option value="">Avval mijoz qo\'shing</option>';
+    return;
+  }
+
+  selectEl.innerHTML =
+    '<option value="">Mijozni tanlang</option>' +
+    customers.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
 }
 
 function renderCustomersList(customers) {
@@ -249,7 +264,13 @@ async function openCustomer(id) {
     document.getElementById('modalCustomerPhone').textContent =
       customer.phone || (customer.telegram_username ? '@' + customer.telegram_username : 'Telefon kiritilmagan');
 
+    const cashbackBadge = document.getElementById('modalCashbackBadge');
+    const cashback = customer.cashback_balance || 0;
+    cashbackBadge.textContent = `🎁 Keshbek: ${formatMoney(cashback)}`;
+
     renderDebts(customer.debts);
+    renderPurchases(customer.purchases || []);
+    renderCashbackSpends(customer.cashbackSpends || []);
 
     document.getElementById('customerModal').style.display = 'flex';
   } catch (error) {
@@ -308,6 +329,85 @@ function renderDebts(debts) {
 function formatDate(dateStr) {
   const [year, month, day] = dateStr.split('-');
   return `${day}.${month}.${year}`;
+}
+
+function renderCashbackSpends(spends) {
+  const listEl = document.getElementById('cashbackSpendsList');
+
+  if (!spends || spends.length === 0) {
+    listEl.innerHTML = '<div class="empty-state">Hali ishlatilmagan</div>';
+    return;
+  }
+
+  listEl.innerHTML = spends.map(s => {
+    const date = new Date(s.created_at);
+    const dateStr = date.toLocaleDateString('uz-UZ');
+
+    return `
+      <div class="spend-item">
+        <div class="purchase-date">${dateStr}</div>
+        <div>-${formatMoney(s.amount)}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderPurchases(purchases) {
+  const listEl = document.getElementById('purchasesList');
+
+  if (!purchases || purchases.length === 0) {
+    listEl.innerHTML = '<div class="empty-state">Hali xarid yo\'q</div>';
+    return;
+  }
+
+  listEl.innerHTML = purchases.map(p => {
+    const date = new Date(p.created_at);
+    const dateStr = date.toLocaleDateString('uz-UZ');
+
+    return `
+      <div class="purchase-item">
+        <div>
+          <div class="purchase-amount">${formatMoney(p.amount)}</div>
+          <div class="purchase-date">${dateStr}</div>
+        </div>
+        <div class="purchase-cashback">+${formatMoney(p.cashback_earned)}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ============================================
+// KESHBEKNI ISHLATISH
+// ============================================
+
+async function spendCashback() {
+  const amount = document.getElementById('spendCashbackAmount').value;
+
+  if (!amount || amount <= 0) {
+    alert("To'g'ri summa kiriting!");
+    return;
+  }
+
+  try {
+    const res = await apiFetch('/api/spend-cashback', {
+      method: 'POST',
+      body: JSON.stringify({ customer_id: currentCustomerId, amount }),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      document.getElementById('spendCashbackAmount').value = '';
+      alert(`✅ Keshbek ishlatildi!\n\nQolgan keshbek: ${formatMoney(data.newBalance)}`);
+
+      openCustomer(currentCustomerId);
+      loadCustomers();
+    } else {
+      alert('Xatolik: ' + (data.error || 'Nomalum xato'));
+    }
+  } catch (error) {
+    alert('Xatolik: ' + error.message);
+  }
 }
 
 // ============================================
@@ -409,6 +509,47 @@ async function makePayment(debtId) {
     openCustomer(currentCustomerId);
     loadCustomers();
     loadStats();
+  } catch (error) {
+    alert('Xatolik: ' + error.message);
+  }
+}
+
+// ============================================
+// XARID QO'SHISH (KESHBEK)
+// ============================================
+
+async function addPurchase() {
+  const customerId = document.getElementById('purchaseCustomerSelect').value;
+  const amount = document.getElementById('purchaseAmount').value;
+
+  if (!customerId) {
+    alert('Mijozni tanlang!');
+    return;
+  }
+
+  if (!amount || amount <= 0) {
+    alert("To'g'ri summa kiriting!");
+    return;
+  }
+
+  try {
+    const res = await apiFetch('/api/purchases', {
+      method: 'POST',
+      body: JSON.stringify({ customer_id: customerId, amount }),
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      document.getElementById('purchaseAmount').value = '';
+      document.getElementById('purchaseCustomerSelect').value = '';
+
+      alert(`✅ Xarid qo'shildi!\n\n🎁 Keshbek: +${formatMoney(data.cashbackEarned)}\n💰 Jami keshbek: ${formatMoney(data.newCashbackBalance)}`);
+
+      loadCustomers();
+    } else {
+      alert('Xatolik: ' + (data.error || 'Nomalum xato'));
+    }
   } catch (error) {
     alert('Xatolik: ' + error.message);
   }

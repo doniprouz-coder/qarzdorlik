@@ -22,7 +22,8 @@ exports.handler = async (event) => {
 
     const supabase = getClient();
 
-    // Qarzni yaratish
+    // Qarzni yaratish VA mijoz ma'lumotini BIRGALIKDA olish
+    // (avval alohida-alohida 2 ta so'rov edi, endi 1 ta so'rovda)
     const { data: debt, error } = await supabase
       .from('debts')
       .insert({
@@ -31,17 +32,12 @@ exports.handler = async (event) => {
         comment: comment || null,
         due_date: due_date || null,
       })
-      .select()
+      .select('*, customer:customers(*)')
       .single();
 
     if (error) throw error;
 
-    // Mijozga Telegram orqali xabar yuborish (agar u ro'yxatdan o'tgan bo'lsa)
-    const { data: customer } = await supabase
-      .from('customers')
-      .select('*')
-      .eq('id', customer_id)
-      .single();
+    const customer = debt.customer;
 
     if (customer && customer.telegram_id) {
       const message =
@@ -52,6 +48,8 @@ exports.handler = async (event) => {
 
       await sendTelegramMessage(customer.telegram_id, message);
     }
+
+    delete debt.customer; // frontend'ga keraksiz ma'lumot yubormaymiz
 
     return {
       statusCode: 200,

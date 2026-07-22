@@ -1,5 +1,6 @@
 // netlify/functions/payment.js
 // To'lovni qabul qilish - va mijozga Telegram orqali avtomatik xabar yuborish
+// TEZLASHTIRILGAN: ketma-ket so'rovlar kamaytirildi
 
 const { getClient } = require('./_supabase');
 const { verifyAuth, unauthorizedResponse } = require('./_auth');
@@ -22,10 +23,10 @@ exports.handler = async (event) => {
 
     const supabase = getClient();
 
-    // Qarzni topish
+    // Qarzni VA mijozni BIRGALIKDA topamiz (1 ta so'rov, avval 2 ta edi)
     const { data: debt, error: findError } = await supabase
       .from('debts')
-      .select('*')
+      .select('*, customer:customers(*)')
       .eq('id', debt_id)
       .single();
 
@@ -41,25 +42,15 @@ exports.handler = async (event) => {
     const newPaidAmount = debt.paid_amount + paymentAmount;
     const status = newPaidAmount >= debt.total_amount ? 'yopilgan' : 'qisman_tolangan';
 
-    // Qarzni yangilash
-    const { data: updated, error: updateError } = await supabase
-      .from('debts')
-      .update({ paid_amount: newPaidAmount, status })
-      .eq('id', debt_id)
-      .select()
-      .single();
+    // Qarzni yangilash VA to'lovni yozish - BIR VAQTDA (parallel, ketma-ket emas)
+    const [{ data: updated, error: updateError }] = await Promise.all([
+      supabase.from('debts').update({ paid_amount: newPaidAmount, status }).eq('id', debt_id).select().single(),
+      supabase.from('payments').insert({ debt_id, amount: paymentAmount }),
+    ]);
 
     if (updateError) throw updateError;
 
-    // To'lov tarixiga yozish
-    await supabase.from('payments').insert({ debt_id, amount: paymentAmount });
-
-    // Mijozga Telegram orqali xabar yuborish
-    const { data: customer } = await supabase
-      .from('customers')
-      .select('*')
-      .eq('id', debt.customer_id)
-      .single();
+    const customer = debt.customer;
 
     if (customer && customer.telegram_id) {
       const remaining = updated.total_amount - updated.paid_amount;

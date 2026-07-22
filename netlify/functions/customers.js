@@ -14,18 +14,13 @@ exports.handler = async (event) => {
   // ============================================
   if (event.httpMethod === 'GET') {
     try {
-      const { data: customers, error } = await supabase
-        .from('customers')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Ikkala so'rovni BIR VAQTDA yuboramiz (avval ketma-ket edi)
+      const [{ data: customers, error }, { data: debts }] = await Promise.all([
+        supabase.from('customers').select('*').order('created_at', { ascending: false }),
+        supabase.from('debts').select('customer_id, total_amount, paid_amount').neq('status', 'yopilgan'),
+      ]);
 
       if (error) throw error;
-
-      // Har bir mijozning qarzini hisoblash
-      const { data: debts } = await supabase
-        .from('debts')
-        .select('customer_id, total_amount, paid_amount')
-        .neq('status', 'yopilgan');
 
       const debtMap = {};
       (debts || []).forEach((d) => {

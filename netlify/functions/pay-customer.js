@@ -1,13 +1,6 @@
 // netlify/functions/pay-customer.js
-//
-// Mijozdan OLINGAN UMUMIY to'lovni qabul qiladi va avtomatik ravishda
-// uning barcha ochiq qarzlariga (ENG ESKISIDAN boshlab) taqsimlab, ayirib
-// chiqadi. Admin har bir qarzni alohida bosishi shart emas.
-//
-// Misol: mijozda 3 ta qarz bor (25,000 / 10,000 / 100,000 qoldiq)
-// Admin 20,000 kiritsa:
-//   -> 1-qarz (eng eski) 15,000 qoldiq edi -> to'liq yopiladi (15,000)
-//   -> qolgan 5,000 -> 2-qarzga (10,000 qoldiq) qo'shiladi -> 5,000 qoldi
+// Umumiy to'lov - eng eski qarzdan avtomatik taqsimlaydi
+// TEZLASHTIRILGAN: barcha yozuvlar PARALLEL bajariladi (ketma-ket emas)
 
 const { getClient } = require('./_supabase');
 const { verifyAuth, unauthorizedResponse } = require('./_auth');
@@ -32,13 +25,16 @@ exports.handler = async (event) => {
     let amountLeft = parseInt(amount);
     const totalPaid = amountLeft;
 
-    // Mijozning ochiq qarzlarini ENG ESKISIDAN boshlab olamiz
-    const { data: debts, error: fetchError } = await supabase
-      .from('debts')
-      .select('*')
-      .eq('customer_id', customer_id)
-      .neq('status', 'yopilgan')
-      .order('created_at', { ascending: true });
+    // Qarzlarni VA mijozni BIR VAQTDA (parallel) olamiz
+    const [{ data: debts, error: fetchError }, { data: customer }] = await Promise.all([
+      supabase
+        .from('debts')
+        .select('*')
+        .eq('customer_id', customer_id)
+        .neq('status', 'yopilgan')
+        .order('created_at', { ascending: true }),
+      supabase.from('customers').select('*').eq('id', customer_id).single(),
+    ]);
 
     if (fetchError) throw fetchError;
 
@@ -50,8 +46,8 @@ exports.handler = async (event) => {
       };
     }
 
-    let affectedCount = 0;
-
+    // Avval - qaysi qarzga qancha borishini XOTIRADA hisoblaymiz (DB'ga tegmasdan)
+    const updates = [];
     for (const debt of debts) {
       if (amountLeft <= 0) break;
 
@@ -62,35 +58,28 @@ exports.handler = async (event) => {
       const newPaidAmount = debt.paid_amount + applyAmount;
       const newStatus = newPaidAmount >= debt.total_amount ? 'yopilgan' : 'qisman_tolangan';
 
-      await supabase
-        .from('debts')
-        .update({ paid_amount: newPaidAmount, status: newStatus })
-        .eq('id', debt.id);
-
-      await supabase.from('payments').insert({ debt_id: debt.id, amount: applyAmount });
-
+      updates.push({ debtId: debt.id, applyAmount, newPaidAmount, newStatus });
       amountLeft -= applyAmount;
-      affectedCount++;
     }
 
-    // Mijozning yangi umumiy qoldig'ini hisoblaymiz
-    const { data: remainingDebts } = await supabase
-      .from('debts')
-      .select('total_amount, paid_amount')
-      .eq('customer_id', customer_id)
-      .neq('status', 'yopilgan');
-
-    const totalRemaining = (remainingDebts || []).reduce(
-      (sum, d) => sum + (d.total_amount - d.paid_amount),
-      0
+    // Endi hisoblangan barcha yozuvlarni BIR VAQTDA (parallel) DB'ga yozamiz
+    await Promise.all(
+      updates.flatMap((u) => [
+        supabase.from('debts').update({ paid_amount: u.newPaidAmount, status: u.newStatus }).eq('id', u.debtId),
+        supabase.from('payments').insert({ debt_id: u.debtId, amount: u.applyAmount }),
+      ])
     );
 
-    // Mijozga Telegram orqali xabar yuborish
-    const { data: customer } = await supabase
-      .from('customers')
-      .select('*')
-      .eq('id', customer_id)
-      .single();
+    // Yangi umumiy qoldiqni QAYTA SO'ROV YUBORMASDAN, xotiradagi ma'lumotdan hisoblaymiz
+    const updatesMap = {};
+    updates.forEach((u) => { updatesMap[u.debtId] = u.newPaidAmount; });
+
+    const totalRemaining = debts.reduce((sum, d) => {
+      const paid = updatesMap[d.id] !== undefined ? updatesMap[d.id] : d.paid_amount;
+      return sum + Math.max(d.total_amount - paid, 0);
+    }, 0);
+
+    const affectedCount = updates.length;
 
     if (customer && customer.telegram_id) {
       let message =
