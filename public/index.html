@@ -70,7 +70,19 @@
       </div>
     </div>
     <div class="form-row">
-      <select id="purchaseCustomerSelect" class="select-input"></select>
+      <div class="customer-picker">
+        <input
+          type="text"
+          id="purchaseCustomerSearch"
+          class="select-input"
+          placeholder="🔍 Mijozni qidiring..."
+          autocomplete="off"
+          oninput="filterPurchaseCustomers()"
+          onfocus="filterPurchaseCustomers()"
+        />
+        <input type="hidden" id="purchaseCustomerId" />
+        <div id="purchaseCustomerDropdown" class="customer-dropdown"></div>
+      </div>
       <input type="number" id="purchaseAmount" placeholder="Xarid summasi (so'm)" />
       <button class="btn-cashback" onclick="addPurchase()">Qo'shish</button>
     </div>
@@ -175,6 +187,14 @@
 <div class="creator-credit">
   <span>© 2026 M. Doniyorbek | Barcha huquqlar himoyalangan |</span>
   <a href="tel:+998932921229">+998 93 292 12 29</a>
+</div>
+
+<!-- YUKLANISH INDIKATORI -->
+<div id="loadingOverlay" class="loading-overlay" style="display:none;">
+  <div class="loading-box">
+    <div class="loading-spinner"></div>
+    <p>Iltimos, kuting...</p>
+  </div>
 </div>
 
 <script src="/app.js"></script>

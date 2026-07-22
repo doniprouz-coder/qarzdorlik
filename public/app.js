@@ -7,6 +7,25 @@
 
 let currentCustomerId = null;
 let allCustomers = []; // Qidiruv uchun - barcha mijozlar shu yerda saqlanadi
+let loadingCount = 0; // Bir nechta so'rov bir vaqtda bo'lsa ham to'g'ri ishlashi uchun
+
+// ============================================
+// YUKLANISH INDIKATORI
+// ============================================
+
+function showLoading() {
+  loadingCount++;
+  const overlay = document.getElementById('loadingOverlay');
+  if (overlay) overlay.style.display = 'flex';
+}
+
+function hideLoading() {
+  loadingCount = Math.max(0, loadingCount - 1);
+  if (loadingCount === 0) {
+    const overlay = document.getElementById('loadingOverlay');
+    if (overlay) overlay.style.display = 'none';
+  }
+}
 
 // ============================================
 // TOKEN BOSHQARISH (localStorage)
@@ -37,16 +56,21 @@ async function apiFetch(url, options = {}) {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(url, { ...options, headers });
+  showLoading();
+  try {
+    const response = await fetch(url, { ...options, headers });
 
-  // Agar token noto'g'ri/eskirgan bo'lsa - login sahifasiga qaytarish
-  if (response.status === 401) {
-    clearToken();
-    showLoginScreen();
-    throw new Error('Qayta kirish kerak');
+    // Agar token noto'g'ri/eskirgan bo'lsa - login sahifasiga qaytarish
+    if (response.status === 401) {
+      clearToken();
+      showLoginScreen();
+      throw new Error('Qayta kirish kerak');
+    }
+
+    return response;
+  } finally {
+    hideLoading();
   }
-
-  return response;
 }
 
 // ============================================
@@ -85,6 +109,7 @@ async function login() {
   const password = document.getElementById('passwordInput').value;
   const errorEl = document.getElementById('loginError');
 
+  showLoading();
   try {
     const res = await fetch('/api/login', {
       method: 'POST',
@@ -103,6 +128,8 @@ async function login() {
     }
   } catch (error) {
     errorEl.textContent = 'Xatolik yuz berdi. Qayta urinib ko\'ring.';
+  } finally {
+    hideLoading();
   }
 }
 
@@ -150,24 +177,9 @@ async function loadCustomers() {
     allCustomers = await res.json();
 
     renderCustomersList(allCustomers);
-    populateCustomerSelect(allCustomers);
   } catch (error) {
     console.log('Mijozlarni yuklashda xatolik:', error.message);
   }
-}
-
-function populateCustomerSelect(customers) {
-  const selectEl = document.getElementById('purchaseCustomerSelect');
-  if (!selectEl) return;
-
-  if (customers.length === 0) {
-    selectEl.innerHTML = '<option value="">Avval mijoz qo\'shing</option>';
-    return;
-  }
-
-  selectEl.innerHTML =
-    '<option value="">Mijozni tanlang</option>' +
-    customers.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
 }
 
 function renderCustomersList(customers) {
@@ -515,15 +527,66 @@ async function makePayment(debtId) {
 }
 
 // ============================================
-// XARID QO'SHISH (KESHBEK)
+// XARID QO'SHISH (KESHBEK) - qidiruvli mijoz tanlash
 // ============================================
 
+function filterPurchaseCustomers() {
+  const query = document.getElementById('purchaseCustomerSearch').value.trim().toLowerCase();
+  const dropdownEl = document.getElementById('purchaseCustomerDropdown');
+
+  // Tanlangan id'ni tozalaymiz - foydalanuvchi qayta yozayotgan bo'lsa,
+  // eski tanlov noto'g'ri bo'lib qolmasin
+  document.getElementById('purchaseCustomerId').value = '';
+
+  if (allCustomers.length === 0) {
+    dropdownEl.innerHTML = '<div class="customer-dropdown-empty">Hali mijoz yo\'q</div>';
+    dropdownEl.classList.add('open');
+    return;
+  }
+
+  const matches = query
+    ? allCustomers.filter(c => {
+        const name = (c.name || '').toLowerCase();
+        const phone = (c.phone || '').toLowerCase();
+        return name.includes(query) || phone.includes(query);
+      })
+    : allCustomers;
+
+  if (matches.length === 0) {
+    dropdownEl.innerHTML = '<div class="customer-dropdown-empty">Hech narsa topilmadi</div>';
+  } else {
+    dropdownEl.innerHTML = matches.slice(0, 30).map(c => `
+      <div class="customer-dropdown-item" onclick="selectPurchaseCustomer(${c.id}, '${escapeHtml(c.name).replace(/'/g, "\\'")}')">
+        <div class="item-name">${escapeHtml(c.name)}</div>
+        ${c.phone ? `<div class="item-phone">${escapeHtml(c.phone)}</div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  dropdownEl.classList.add('open');
+}
+
+function selectPurchaseCustomer(id, name) {
+  document.getElementById('purchaseCustomerId').value = id;
+  document.getElementById('purchaseCustomerSearch').value = name;
+  document.getElementById('purchaseCustomerDropdown').classList.remove('open');
+}
+
+// Dropdown tashqarisiga bosilsa - yopiladi
+document.addEventListener('click', (e) => {
+  const picker = document.querySelector('.customer-picker');
+  if (picker && !picker.contains(e.target)) {
+    const dropdownEl = document.getElementById('purchaseCustomerDropdown');
+    if (dropdownEl) dropdownEl.classList.remove('open');
+  }
+});
+
 async function addPurchase() {
-  const customerId = document.getElementById('purchaseCustomerSelect').value;
+  const customerId = document.getElementById('purchaseCustomerId').value;
   const amount = document.getElementById('purchaseAmount').value;
 
   if (!customerId) {
-    alert('Mijozni tanlang!');
+    alert("Ro'yxatdan mijozni tanlang! (qidiruv natijasidan bosib tanlang)");
     return;
   }
 
@@ -542,7 +605,8 @@ async function addPurchase() {
 
     if (res.ok) {
       document.getElementById('purchaseAmount').value = '';
-      document.getElementById('purchaseCustomerSelect').value = '';
+      document.getElementById('purchaseCustomerSearch').value = '';
+      document.getElementById('purchaseCustomerId').value = '';
 
       alert(`✅ Xarid qo'shildi!\n\n🎁 Keshbek: +${formatMoney(data.cashbackEarned)}\n💰 Jami keshbek: ${formatMoney(data.newCashbackBalance)}`);
 
